@@ -253,7 +253,6 @@ test_data = [
      ))
 ]
 
-
 @pytest.mark.parametrize("name, value, serialized, _", test_data)
 def test_serialize(name, value, serialized, _):
     assert serialize(value) == bytes.fromhex(serialized)

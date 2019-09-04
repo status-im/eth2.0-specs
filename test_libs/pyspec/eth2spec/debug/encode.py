@@ -4,7 +4,6 @@ from eth2spec.utils.ssz.ssz_typing import (
     Bitlist, Bitvector, Container
 )
 
-
 def encode(value, include_hash_tree_roots=False):
     if isinstance(value, uint):
         # Larger uints are boxed and the class declares their byte length

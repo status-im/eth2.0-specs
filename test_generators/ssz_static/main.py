@@ -4,7 +4,10 @@ from inspect import getmembers, isclass
 
 from eth2spec.debug import random_value, encode
 from eth2spec.phase0 import spec
-from eth2spec.utils.ssz.ssz_typing import Container
+from eth2spec.utils.ssz.ssz_typing import (
+    Container,
+    boolean, Bitlist, uint64, enable_printing, pr
+)
 from eth2spec.utils.ssz.ssz_impl import (
     hash_tree_root,
     signing_root,
@@ -16,18 +19,19 @@ from preset_loader import loader
 MAX_BYTES_LENGTH = 100
 MAX_LIST_LENGTH = 10
 
-
 def create_test_case(rng: Random, typ, mode: random_value.RandomizationMode, chaos: bool) -> Iterable[gen_typing.TestCasePart]:
     value = random_value.get_random_ssz_object(rng, typ, MAX_BYTES_LENGTH, MAX_LIST_LENGTH, mode, chaos)
     yield "value", "data", encode.encode(value)
+    pr("======= SERIALIZING VALUE")
     yield "serialized", "ssz", serialize(value)
+    pr("======= COMPUTING TREE ROOT")
     roots_data = {
         "root": '0x' + hash_tree_root(value).hex()
     }
     if isinstance(value, Container) and hasattr(value, "signature"):
+        pr("======= COMPUTING SIGNING ROOT")
         roots_data["signing_root"] = '0x' + signing_root(value).hex()
     yield "roots", "data", roots_data
-
 
 def get_spec_ssz_types():
     return [

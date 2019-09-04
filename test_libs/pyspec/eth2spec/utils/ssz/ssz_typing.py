@@ -2,6 +2,15 @@ from typing import Dict, Iterator
 import copy
 from types import GeneratorType
 
+printing_enabled = False
+
+def pr(*args):
+    if printing_enabled:
+        print(*args)
+
+def enable_printing(state):
+    global printing_enabled
+    printing_enabled = state
 
 class DefaultingTypeMeta(type):
     def default(cls):

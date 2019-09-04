@@ -1,4 +1,5 @@
 from hashlib import sha256
+from .ssz.ssz_typing import pr
 
 ZERO_BYTES32 = b'\x00' * 32
 
@@ -25,4 +26,7 @@ def hash(x):
     for (k, h) in hash_cache:
         if x == k:
             return h
-    return _hash(x)
+    pr("HASHING ", list(x))
+    res = _hash(x)
+    pr("COMPUTED HASH ", res.hex())
+    return res

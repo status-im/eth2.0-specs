@@ -1,5 +1,6 @@
 from eth2spec.utils.hash_function import hash
 from math import log2
+from .ssz.ssz_typing import pr
 
 
 ZERO_BYTES32 = b'\x00' * 32
@@ -56,6 +57,7 @@ def merkleize_chunks(chunks, limit=None):
 
     def merge(h, i):
         j = 0
+        pr("merging", list(h), "i", i, "count", count)
         while True:
             if i & (1 << j) == 0:
                 if i == count and j < depth:
@@ -71,12 +73,17 @@ def merkleize_chunks(chunks, limit=None):
     for i in range(count):
         merge(chunks[i], i)
 
+    pr("tmp", tmp)
+    pr("limit", limit, "max_depth", max_depth)
+
     # complement with 0 if empty, or if not the right power of 2
     if 1 << depth != count:
+        pr("forward zero hashes")
         merge(zerohashes[0], count)
 
     # the next power of two may be smaller than the ultimate virtual size, complement with zero-hashes at each depth.
     for j in range(depth, max_depth):
+        pr("depth extension")
         tmp[j + 1] = hash(tmp[j] + zerohashes[j])
 
     return tmp[max_depth]

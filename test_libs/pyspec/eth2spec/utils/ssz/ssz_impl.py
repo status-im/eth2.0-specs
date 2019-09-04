@@ -2,7 +2,7 @@ from ..merkle_minimal import merkleize_chunks
 from ..hash_function import hash
 from .ssz_typing import (
     SSZValue, SSZType, BasicValue, BasicType, Series, Elements, Bits, boolean, Container, List, Bytes,
-    Bitlist, Bitvector, uint,
+    Bitlist, Bitvector, uint, pr
 )
 
 # SSZ Serialization
@@ -98,13 +98,19 @@ def pack(values: Series):
     elif isinstance(values, Bits):
         # packs the bits in bytes, left-aligned.
         # Exclusive length delimiting bits for bitlists.
-        return values.as_bytes()
-    return b''.join([serialize_basic(value) for value in values])
+        pr("VALUES", values)
+        res = values.as_bytes()
+        pr("BUTS TO PACK", list(res))
+        return res
 
+    to_pack = [serialize_basic(value) for value in values]
+    pr("TO PACK", list(to_pack))
+    return b''.join(to_pack)
 
 def chunkify(bytez):
     # pad `bytez` to nearest 32-byte multiple
     bytez += b'\x00' * (-len(bytez) % 32)
+    pr("CHUNKIFY", list(bytez))
     return [bytez[i:i + 32] for i in range(0, len(bytez), 32)]
 
 
@@ -141,21 +147,36 @@ def chunk_count(typ: SSZType) -> int:
 
 
 def hash_tree_root(obj: SSZValue):
+    pr("HASH TREE ROOT", repr(obj))
+    typ = obj.type()
+    case = None
+
     if isinstance(obj, Series):
         if is_bottom_layer_kind(obj.type()):
+            case = "bottom_series"
             leaves = chunkify(pack(obj))
         else:
+            case = "series"
             leaves = [hash_tree_root(value) for value in obj]
     elif isinstance(obj, BasicValue):
         leaves = chunkify(serialize_basic(obj))
+        case = "basic_value"
     else:
         raise Exception(f"Type not supported: {type(obj)}")
 
-    if isinstance(obj, (List, Bytes, Bitlist)):
-        return mix_in_length(merkleize_chunks(leaves, limit=chunk_count(obj.type())), len(obj))
-    else:
-        return merkleize_chunks(leaves)
+    pr("TYP", typ,
+       "CASE", case,
+       "LEAVES", [list(leave) for leave in leaves])
 
+    result = None
+    if isinstance(obj, (List, Bytes, Bitlist)):
+        case += "_list_" + str(len(obj))
+        result = mix_in_length(merkleize_chunks(leaves, limit=chunk_count(obj.type())), len(obj))
+    else: 
+        result = merkleize_chunks(leaves)
+
+    pr("RESULT", '0x' + result.hex())
+    return result
 
 def signing_root(obj: Container):
     # ignore last field
