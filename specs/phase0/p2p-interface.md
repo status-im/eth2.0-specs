@@ -268,12 +268,21 @@ This defines both the type of data being sent on the topic and how the data fiel
 - `Encoding` - the encoding strategy describes a specific representation of bytes that will be transmitted over the wire.
   See the [Encodings](#Encodings) section for further details.
 
+Messages with unknown `topic` must be ignored.
+
 *Note*: `ForkDigestValue` is composed of values that are not known until the genesis block/state are available.
 Due to this, clients SHOULD NOT subscribe to gossipsub topics until these genesis values are known.
 
-Each gossipsub [message](https://github.com/libp2p/go-libp2p-pubsub/blob/master/pb/rpc.proto#L17-L24) has a maximum size of `GOSSIP_MAX_SIZE`.
-Clients MUST reject (fail validation) messages that are over this size limit.
-Likewise, clients MUST NOT emit or propagate messages larger than this limit.
+The uncompressed payload in the [`data`](https://github.com/libp2p/go-libp2p-pubsub/blob/c06df2f9a38e9382e644b241adf0e96e5ca00955/pb/rpc.proto#L19)
+must have has a length no greater than `GOSSIP_MAX_SIZE`.
+
+After compression, the payload in the `data` field must have a size no greater than
+`32 + GOSSIP_MAX_SIZE + GOSSIP_MAX_SIZE / 6` (rounded down), as given by the
+[snappy maximum compressed length function](https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47).
+
+Clients MUST reject (fail validation) messages with payloads that are over these size limits.
+Likewise, clients MUST NOT emit or propagate messages larger than these limits.
+Clients MAY reject messages whose maximum uncompressed size exceed the maximum possible encoded length of the payload based on its SSZ encoding, when this limit is lower than `GOSSIP_MAX_SIZE`.
 
 The optional `from` (1), `seqno` (3), `signature` (5) and `key` (6) protobuf fields are omitted from the message,
 since messages are identified by content, anonymous, and signed where necessary in the application layer.
@@ -287,6 +296,8 @@ The `message-id` of a gossipsub message MUST be the following 20 byte value comp
 * Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
   the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
   i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
+
+Messages with `message-id` values of lengths other than 20 bytes must be rejects.
 
 *Note*: The above logic handles two exceptional cases:
 (1) multiple snappy `data` can decompress to the same value,
